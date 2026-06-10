@@ -4,19 +4,22 @@ from config import WEAVIATE_URL, WEAVIATE_API_KEY, GROQ_API_KEY
 from langchain_groq import ChatGroq
 from utils import get_embedding_model
 
-client = weaviate.Client(
-    url=WEAVIATE_URL,
-    auth_client_secret=AuthApiKey(WEAVIATE_API_KEY)
-)
-embedding_model = get_embedding_model()
+def get_client():
+    return weaviate.Client(
+        url=WEAVIATE_URL,
+        auth_client_secret=AuthApiKey(WEAVIATE_API_KEY)
+    )
 
 llm = ChatGroq(
     groq_api_key=GROQ_API_KEY,
     model_name="llama-3.1-8b-instant"
 )
 
+embedding_model = get_embedding_model()
 
 def search_code(query, repo_name):
+    client = get_client()
+    
     query_vector = embedding_model.embed_query(query)
 
     result = client.query.get("CodeChunk", ["text", "path"]) \

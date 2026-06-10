@@ -31,53 +31,16 @@ st.sidebar.info(
 
 # ---------------- REPO UPLOAD ----------------
 
-st.sidebar.markdown("## 📤 Upload Repository")
+st.sidebar.markdown("## 🚀 Demo Mode")
 
-uploaded_file = st.sidebar.file_uploader(
-    "Upload ZIP repo",
-    type=["zip"]
+st.sidebar.info(
+    """
+    Public deployment uses pre-indexed repositories.
+
+    Repository ingestion is available
+    in the local development version.
+    """
 )
-
-if uploaded_file is not None:
-
-    repo_name = uploaded_file.name.replace(".zip", "")
-
-    st.sidebar.success(f"📦 Selected: {repo_name}")
-
-    if st.sidebar.button("🚀 Ingest Repository"):
-
-        extract_path = os.path.join(DATA_DIR, repo_name)
-
-        if os.path.exists(extract_path):
-            shutil.rmtree(extract_path)
-
-        zip_path = os.path.join(
-            DATA_DIR,
-            uploaded_file.name
-        )
-
-        with open(zip_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(extract_path)
-
-        os.remove(zip_path)
-
-        from ingest import ingest
-
-        with st.spinner("🔄 Ingesting repository..."):
-
-            ingest(
-                extract_path,
-                repo_name
-            )
-
-        st.sidebar.success(
-            f"✅ {repo_name} ingested successfully!"
-        )
-
-        st.rerun()
 
 # ---------------- LOAD REPOSITORIES ----------------
 
@@ -90,12 +53,13 @@ repos = [
 # ---------------- NO REPO CASE ----------------
 
 if not repos:
-
-    st.info(
-        "📤 Upload a repository ZIP file from the sidebar to begin."
+    st.warning(
+        "No repositories found locally."
     )
 
-    st.stop()
+    repos = [
+        "AI-driven-health-monitoring-system-using-ayurveda"
+    ]
 
 # ---------------- SELECT REPO ----------------
 
