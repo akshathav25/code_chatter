@@ -1,31 +1,52 @@
 import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
+# ✅ Load files
 def load_code_files(repo_path):
-    files_data = []
+    code_files = []
+
+    print("🔍 Scanning:", repo_path)
 
     for root, _, files in os.walk(repo_path):
         for file in files:
-            if file.endswith((".py", ".js", ".ts")):
+            if file.endswith(
+    (
+        ".py",
+        ".js",
+        ".ts",
+        ".jsx",
+        ".tsx",
+        ".java",
+        ".cpp",
+        ".c",
+        ".cs",
+        ".go",
+        ".rs",
+        ".md",
+        ".txt"
+    )
+):
                 path = os.path.join(root, file)
 
                 try:
                     with open(path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
 
-                    files_data.append({
+                    code_files.append({
                         "path": path,
                         "content": content
                     })
 
-                except:
-                    pass
+                except Exception as e:
+                    print("Error:", path, e)
 
-    return files_data
+    print("✅ Files loaded:", len(code_files))
+    return code_files
 
 
+# ✅ Split code
 def split_code(files):
     splitter = RecursiveCharacterTextSplitter.from_language(
         language="python",
@@ -47,6 +68,7 @@ def split_code(files):
     return docs
 
 
+# ✅ Embedding model
 def get_embedding_model():
     return HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"

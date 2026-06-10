@@ -1,43 +1,104 @@
 import os
 import weaviate
-from weaviate.auth import AuthApiKey
-from config import WEAVIATE_URL, WEAVIATE_API_KEY
-from utils import load_code_files, split_code, get_embedding_model
-
-client = weaviate.Client(
-    url=WEAVIATE_URL,
-    auth_client_secret=AuthApiKey(WEAVIATE_API_KEY)
+from config import WEAVIATE_URL
+from utils import (
+    load_code_files,
+    split_code,
+    get_embedding_model
 )
+
+# Connect Weaviate
+client = weaviate.Client(WEAVIATE_URL)
+
+# Embedding model
 embedding_model = get_embedding_model()
 
 
+# --------------------------------------------------
+# Create Schema
+# --------------------------------------------------
 def create_schema():
-    if client.schema.exists("CodeChunk"):
-        print("Schema exists")
+
+    existing_classes = [
+        c["class"]
+        for c in client.schema.get()["classes"]
+    ]
+
+    if "CodeChunk" in existing_classes:
+        print("✅ Schema already exists")
         return
 
     schema = {
         "class": "CodeChunk",
         "vectorizer": "none",
         "properties": [
-            {"name": "text", "dataType": ["text"]},
-            {"name": "path", "dataType": ["string"]},
-            {"name": "repo", "dataType": ["string"]}
+            {
+                "name": "text",
+                "dataType": ["text"]
+            },
+            {
+                "name": "path",
+                "dataType": ["string"]
+            },
+            {
+                "name": "repo",
+                "dataType": ["string"]
+            }
         ]
     }
 
     client.schema.create_class(schema)
-    print("Schema created")
+
+    print("✅ Schema created")
 
 
+# --------------------------------------------------
+# Check if repo already ingested
+# --------------------------------------------------
+def repo_already_exists(repo_name):
+
+    result = (
+        client.query
+        .get("CodeChunk", ["repo"])
+        .with_where({
+            "path": ["repo"],
+            "operator": "Equal",
+            "valueString": repo_name
+        })
+        .with_limit(1)
+        .do()
+    )
+
+    try:
+        return len(result["data"]["Get"]["CodeChunk"]) > 0
+    except:
+        return False
+
+
+# --------------------------------------------------
+# Ingest Single Repo
+# --------------------------------------------------
 def ingest(repo_path, repo_name):
+
+    print(f"\n🚀 Ingesting: {repo_name}")
+
     files = load_code_files(repo_path)
 
+    print(f"📁 Files loaded: {len(files)}")
+
+    if len(files) == 0:
+        print("❌ No code files found")
+        return
+
     docs = split_code(files)
-    print(f"{repo_name}: {len(docs)} chunks")
+
+    print(f"📦 Chunks created: {len(docs)}")
 
     for i, doc in enumerate(docs):
-        vector = embedding_model.embed_query(doc["text"])
+
+        vector = embedding_model.embed_query(
+            doc["text"]
+        )
 
         client.data_object.create(
             {
@@ -50,36 +111,41 @@ def ingest(repo_path, repo_name):
         )
 
         if i % 100 == 0:
-            print(f"{repo_name}: {i}/{len(docs)}")
+            print(
+                f"Inserted {i}/{len(docs)} chunks"
+            )
 
-def repo_already_exists(repo_name):
-    result = client.query.get("CodeChunk", ["repo"]) \
-        .with_where({
-            "path": ["repo"],
-            "operator": "Equal",
-            "valueString": repo_name
-        }) \
-        .with_limit(1) \
-        .do()
-
-    return len(result["data"]["Get"]["CodeChunk"]) > 0
-
-    print(f"✅ Ingestion complete for {repo_name}")
+    print(f"✅ Finished: {repo_name}")
 
 
+# --------------------------------------------------
+# Main
+# --------------------------------------------------
 if __name__ == "__main__":
+
     create_schema()
 
     BASE_PATH = "../data"
 
-    for repo in os.listdir(BASE_PATH):
-        repo_path = os.path.join(BASE_PATH, repo)
+    repos = os.listdir(BASE_PATH)
 
-        if os.path.isdir(repo_path):
+    for repo in repos:
 
-            if repo_already_exists(repo):
-                print(f"⏭️ Skipping {repo} (already ingested)")
-                continue
+        repo_path = os.path.join(
+            BASE_PATH,
+            repo
+        )
 
-            print(f"\n🚀 Ingesting {repo}")
-            ingest(repo_path, repo)
+        if not os.path.isdir(repo_path):
+            continue
+
+        if repo_already_exists(repo):
+            print(
+                f"⏭️ Skipping {repo} "
+                "(already ingested)"
+            )
+            continue
+
+        ingest(repo_path, repo)
+
+    print("\n🎉 ALL REPOSITORIES INGESTED")

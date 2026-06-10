@@ -1,25 +1,18 @@
 import weaviate
-from weaviate.auth import AuthApiKey
-from config import WEAVIATE_URL, WEAVIATE_API_KEY, GROQ_API_KEY
+from config import WEAVIATE_URL, GROQ_API_KEY
 from langchain_groq import ChatGroq
 from utils import get_embedding_model
 
-def get_client():
-    return weaviate.Client(
-        url=WEAVIATE_URL,
-        auth_client_secret=AuthApiKey(WEAVIATE_API_KEY)
-    )
+client = weaviate.Client(WEAVIATE_URL)
+embedding_model = get_embedding_model()
 
 llm = ChatGroq(
     groq_api_key=GROQ_API_KEY,
     model_name="llama-3.1-8b-instant"
 )
 
-embedding_model = get_embedding_model()
 
 def search_code(query, repo_name):
-    client = get_client()
-    
     query_vector = embedding_model.embed_query(query)
 
     result = client.query.get("CodeChunk", ["text", "path"]) \
@@ -54,24 +47,20 @@ def ask_question(query, repo_name, chat_history):
     prompt = f"""
 You are a senior software engineer analyzing a codebase.
 
-Answer using ONLY the provided code context.
+Use BOTH conversation history and code context.
 
-- Mention exact file names
-- Explain relationships between components
-- Be specific (not generic explanations)
-- If unsure, say "not enough context"
-
-Use the conversation history and code context.
-
-Conversation so far:
+Conversation History:
 {history_text}
 
-Context:
+Code Context:
 {context}
 
-Question:
+Current Question:
 {query}
-Give a precise answer based on both the conversation history and the code context.
+
+- Mention file names
+- Be precise
+- If unsure, say "not enough context"
 """
 
     response = llm.invoke(prompt)
