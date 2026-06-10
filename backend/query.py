@@ -1,9 +1,13 @@
 import weaviate
-from config import WEAVIATE_URL, GROQ_API_KEY
+from weaviate.auth import AuthApiKey
+from config import WEAVIATE_URL, WEAVIATE_API_KEY, GROQ_API_KEY
 from langchain_groq import ChatGroq
 from utils import get_embedding_model
 
-client = weaviate.Client(WEAVIATE_URL)
+client = weaviate.Client(
+    url=WEAVIATE_URL,
+    auth_client_secret=AuthApiKey(WEAVIATE_API_KEY)
+)
 embedding_model = get_embedding_model()
 
 llm = ChatGroq(

@@ -1,9 +1,13 @@
 import os
 import weaviate
-from config import WEAVIATE_URL
+from weaviate.auth import AuthApiKey
+from config import WEAVIATE_URL, WEAVIATE_API_KEY
 from utils import load_code_files, split_code, get_embedding_model
 
-client = weaviate.Client(WEAVIATE_URL)
+client = weaviate.Client(
+    url=WEAVIATE_URL,
+    auth_client_secret=AuthApiKey(WEAVIATE_API_KEY)
+)
 embedding_model = get_embedding_model()
 
 
