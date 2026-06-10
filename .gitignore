@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Environment
+.env
+
+# Virtual Environments
+venv/
+.venv/
+
+# Vector DB / Local Data
+data/
+
+# Streamlit
+.streamlit/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
